@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Homem-Aranha vs Venom — Lobby</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+
+    font-family: Arial, Helvetica, sans-serif;
+    color: white;
+
+    background:
+        radial-gradient(
+            circle at 50% 45%,
+            rgba(0, 140, 255, .28),
+            transparent 35%
+        ),
+        linear-gradient(
+            135deg,
+            #07182b,
+            #07111f 45%,
+            #02050a
+        );
+}
+
+
+/* =========================
+   FUNDO
+========================= */
+
+body::before {
+
+    content: "";
+
+    position: fixed;
+
+    inset: 0;
+
+    background:
+        linear-gradient(
+            120deg,
+            transparent 0%,
+            rgba(0, 170, 255, .08) 45%,
+            transparent 70%
+        );
+
+    pointer-events: none;
+}
+
+
+.background-shape {
+
+    position: fixed;
+
+    width: 700px;
+    height: 700px;
+
+    right: -250px;
+    top: -200px;
+
+    background: #008cff;
+
+    opacity: .05;
+
+    transform: rotate(35deg);
+
+    clip-path: polygon(
+        50% 0,
+        100% 25%,
+        75% 100%,
+        0 65%
+    );
+}
+
+
+/* =========================
+   TÍTULO
+========================= */
+
+.titulo-principal {
+
+    position: absolute;
+
+    top: 25px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 20;
+
+    font-size: 32px;
+
+    font-weight: 900;
+
+    letter-spacing: 2px;
+
+    text-align: center;
+
+    white-space: nowrap;
+
+    color: white;
+
+    text-shadow:
+        0 3px 12px rgba(0,0,0,.9),
+        0 0 20px rgba(0,130,255,.25);
+}
+
+
+.titulo-principal span {
+
+    color: #e32632;
+
+    margin: 0 8px;
+
+    text-shadow:
+        0 0 12px
+        rgba(230,30,45,.8);
+}
+
+
+/* =========================
+   PERSONAGEM CENTRAL
+========================= */
+
+.personagem {
+
+    position: absolute;
+
+    left: 50%;
+    top: 44%;
+
+    transform:
+        translate(-50%, -50%);
+
+    width: 520px;
+    height: 610px;
+
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    z-index: 2;
+}
+
+
+/* brilho atrás */
+
+.personagem::before {
+
+    content: "";
+
+    position: absolute;
+
+    bottom: 40px;
+
+    width: 330px;
+    height: 330px;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(0,157,255,.55),
+            rgba(0,120,255,.12) 45%,
+            transparent 70%
+        );
+
+    filter: blur(15px);
+}
+
+
+/* luz no chão */
+
+.personagem::after {
+
+    content: "";
+
+    position: absolute;
+
+    bottom: 25px;
+
+    width: 260px;
+    height: 35px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            ellipse,
+            #20aaff,
+            transparent 70%
+        );
+
+    opacity: .7;
+
+    filter: blur(10px);
+}
+
+
+/* imagem */
+
+#personagemImagem {
+
+    position: relative;
+
+    z-index: 3;
+
+    width: 450px;
+    height: 570px;
+
+    object-fit: contain;
+
+    filter:
+        drop-shadow(
+            0 15px 18px rgba(0,0,0,.8)
+        )
+        drop-shadow(
+            0 0 25px rgba(0,140,255,.3)
+        );
+
+    transition:
+        opacity .15s,
+        transform .2s;
+}
+
+
+.personagem.mudando #personagemImagem {
+
+    opacity: 0;
+
+    transform: scale(.95);
+}
+
+
+/* =========================
+   NOME DA SKIN
+========================= */
+
+.skin-atual {
+
+    position: absolute;
+
+    bottom: 25px;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 5;
+
+    text-align: center;
+
+    white-space: nowrap;
+
+    text-shadow:
+        0 3px 10px #000;
+}
+
+
+.skin-atual small {
+
+    display: block;
+
+    color: #8da0b4;
+
+    font-size: 10px;
+
+    letter-spacing: 2px;
+
+    margin-bottom: 5px;
+}
+
+
+.skin-atual strong {
+
+    font-size: 21px;
+
+    text-transform: uppercase;
+}
+
+
+/* =========================
+   BOTÃO JOGAR
+========================= */
+
+.jogar {
+
+    position: absolute;
+
+    left: 50%;
+
+    bottom: 80px;
+
+    transform: translateX(-50%);
+
+    width: 245px;
+
+    padding: 18px;
+
+    border: none;
+
+    border-radius: 5px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #c80d1c,
+            #f02b39
+        );
+
+    color: white;
+
+    font-size: 24px;
+
+    font-weight: 900;
+
+    cursor: pointer;
+
+    z-index: 10;
+
+    box-shadow:
+        0 8px 30px
+        rgba(229,28,42,.35);
+
+    transition: .2s;
+}
+
+
+.jogar:hover {
+
+    transform:
+        translateX(-50%)
+        translateY(-3px);
+
+    filter: brightness(1.15);
+
+    box-shadow:
+        0 10px 40px
+        rgba(229,28,42,.55);
+}
+
+
+.jogar:active {
+
+    transform:
+        translateX(-50%)
+        scale(.97);
+}
+
+
+/* =========================
+   TÍTULO DAS SKINS
+========================= */
+
+.titulo-skins {
+
+    position: absolute;
+
+    left: 35px;
+
+    bottom: 145px;
+
+    color: #9baaba;
+
+    font-size: 11px;
+
+    font-weight: bold;
+
+    text-transform: uppercase;
+
+    letter-spacing: 2px;
+
+    z-index: 10;
+}
+
+
+/* =========================
+   SELEÇÃO DE SKINS
+========================= */
+
+.seletor {
+
+    position: absolute;
+
+    left: 35px;
+
+    bottom: 25px;
+
+    display: flex;
+
+    gap: 10px;
+
+    z-index: 10;
+}
+
+
+.skin {
+
+    position: relative;
+
+    width: 110px;
+    height: 110px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(20,30,45,.95),
+            rgba(5,10,17,.95)
+        );
+
+    border: 2px solid #293748;
+
+    border-radius: 5px;
+
+    cursor: pointer;
+
+    overflow: hidden;
+
+    transition: .2s;
+}
+
+
+.skin:hover {
+
+    transform: translateY(-6px);
+
+    border-color: #8998a8;
+}
+
+
+.skin.selecionada {
+
+    border-color: #e51c2a;
+
+    box-shadow:
+        0 0 0 1px #e51c2a,
+        0 0 20px
+        rgba(229,28,42,.4);
+}
+
+
+.skin.selecionada::after {
+
+    content: "✓";
+
+    position: absolute;
+
+    right: 5px;
+    top: 5px;
+
+    width: 20px;
+    height: 20px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    background: #e51c2a;
+
+    border-radius: 50%;
+
+    font-size: 12px;
+
+    font-weight: bold;
+}
+
+
+.skin img {
+
+    width: 100%;
+    height: 80px;
+
+    object-fit: contain;
+
+    transition: .2s;
+}
+
+
+.skin:hover img {
+
+    transform: scale(1.08);
+}
+
+
+.skin-nome {
+
+    position: absolute;
+
+    left: 5px;
+    right: 5px;
+
+    bottom: 7px;
+
+    text-align: center;
+
+    font-size: 10px;
+
+    font-weight: bold;
+
+    color: #dce2e8;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+}
+
+
+/* =========================
+   RESPONSIVO
+========================= */
+
+@media(max-width: 800px) {
+
+    .titulo-principal {
+
+        font-size: 24px;
+
+        top: 18px;
+    }
+
+
+    .personagem {
+
+        transform:
+            translate(-50%, -50%)
+            scale(.75);
+    }
+
+
+    .jogar {
+
+        bottom: 135px;
+
+        width: 190px;
+    }
+
+
+    .seletor {
+
+        left: 20px;
+
+        max-width:
+            calc(100% - 40px);
+
+        overflow-x: auto;
+    }
+
+
+    .skin {
+
+        min-width: 90px;
+
+        height: 90px;
+    }
+
+
+    .skin img {
+
+        height: 62px;
+    }
+
+
+    .titulo-skins {
+
+        left: 20px;
+
+        bottom: 125px;
+    }
+
+}
+
+
+@media(max-width: 550px) {
+
+    .titulo-principal {
+
+        font-size: 18px;
+
+        letter-spacing: 1px;
+    }
+
+
+    .titulo-principal span {
+
+        margin: 0 4px;
+    }
+
+
+    .personagem {
+
+        top: 40%;
+
+        transform:
+            translate(-50%, -50%)
+            scale(.6);
+    }
+
+
+    .jogar {
+
+        bottom: 115px;
+
+        width: 170px;
+
+        padding: 14px;
+
+        font-size: 19px;
+    }
+
+
+    .skin-atual {
+
+        bottom: 50px;
+    }
+
+
+    .skin-atual strong {
+
+        font-size: 18px;
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="background-shape"></div>
+
+
+<!-- =========================
+     TÍTULO
+========================= -->
+
+<div class="titulo-principal">
+
+    HOMEM-ARANHA
+
+    <span>VS</span>
+
+    VENOM
+
+</div>
+
+
+<!-- =========================
+     PERSONAGEM
+========================= -->
+
+<div
+    class="personagem"
+    id="personagem">
+
+
+    <img
+        id="personagemImagem"
+        src="vasco.webp"
+        alt="Personagem">
+
+
+    <div class="skin-atual">
+
+        <small>
+            SKIN EQUIPADA
+        </small>
+
+        <strong id="nomeSkin">
+            Homem-Aranha
+        </strong>
+
+    </div>
+
+
+</div>
+
+
+<!-- =========================
+     TÍTULO DAS SKINS
+========================= -->
+
+<div class="titulo-skins">
+
+    Escolha seu personagem
+
+</div>
+
+
+<!-- =========================
+     SKINS
+========================= -->
+
+<div class="seletor">
+
+
+    <!-- HOMEM-ARANHA -->
+
+    <div
+        class="skin selecionada"
+
+        data-skin="vasco"
+
+        data-nome="Homem-Aranha"
+
+        data-img="vasco.webp">
+
+        <img src="vasco.webp">
+
+        <div class="skin-nome">
+            Homem-Aranha
+        </div>
+
+    </div>
+
+
+    <!-- MILES MORALES -->
+
+    <div
+        class="skin"
+
+        data-skin="miles"
+
+        data-nome="Miles Morales"
+
+        data-img="Miles_Morales.webp">
+
+        <img src="Miles_Morales.webp">
+
+        <div class="skin-nome">
+            Miles Morales
+        </div>
+
+    </div>
+
+
+    <!-- ARANHA BRANCO -->
+
+    <div
+        class="skin"
+
+        data-skin="branco"
+
+        data-nome="Aranha Branco"
+
+        data-img="branco_invertida.png">
+
+        <img src="branco_invertida.png">
+
+        <div class="skin-nome">
+            Aranha Branco
+        </div>
+
+    </div>
+
+
+    <!-- ARANHA PRETO -->
+
+    <div
+        class="skin"
+
+        data-skin="preto"
+
+        data-nome="Aranha Preto"
+
+        data-img="pose_preto_final.png">
+
+        <img src="pose_preto_final.png">
+
+        <div class="skin-nome">
+            Aranha Preto
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<!-- =========================
+     BOTÃO JOGAR
+========================= -->
+
+<button
+    class="jogar"
+    id="botaoJogar">
+
+    ▶ JOGAR
+
+</button>
+
+
+<script>
+
+
+/* =========================
+   ELEMENTOS
+========================= */
+
+const skins =
+    document.querySelectorAll(
+        ".skin"
+    );
+
+
+const imagem =
+    document.getElementById(
+        "personagemImagem"
+    );
+
+
+const nome =
+    document.getElementById(
+        "nomeSkin"
+    );
+
+
+const personagem =
+    document.getElementById(
+        "personagem"
+    );
+
+
+/* =========================
+   SKIN SALVA
+========================= */
+
+let skinSelecionada =
+    localStorage.getItem(
+        "skinAranha"
+    ) || "vasco";
+
+
+/* =========================
+   SELECIONAR SKIN
+========================= */
+
+function selecionarSkin(skin) {
+
+    skins.forEach(item => {
+
+        item.classList.remove(
+            "selecionada"
+        );
+
+    });
+
+
+    skin.classList.add(
+        "selecionada"
+    );
+
+
+    const tipo =
+        skin.dataset.skin;
+
+
+    const nomeSkin =
+        skin.dataset.nome;
+
+
+    const imagemSkin =
+        skin.dataset.img;
+
+
+    skinSelecionada =
+        tipo;
+
+
+    localStorage.setItem(
+        "skinAranha",
+        tipo
+    );
+
+
+    /* animação */
+
+    personagem.classList.add(
+        "mudando"
+    );
+
+
+    setTimeout(() => {
+
+        imagem.src =
+            imagemSkin;
+
+        nome.textContent =
+            nomeSkin;
+
+        personagem.classList.remove(
+            "mudando"
+        );
+
+    }, 120);
+
+}
+
+
+/* =========================
+   CLIQUE NAS SKINS
+========================= */
+
+skins.forEach(skin => {
+
+    skin.addEventListener(
+        "click",
+
+        () => {
+
+            selecionarSkin(
+                skin
+            );
+
+        }
+
+    );
+
+});
+
+
+/* =========================
+   RECUPERAR SKIN
+========================= */
+
+const inicial =
+    document.querySelector(
+        `[data-skin="${skinSelecionada}"]`
+    );
+
+
+if (inicial) {
+
+    selecionarSkin(
+        inicial
+    );
+
+}
+
+
+/* =========================
+   BOTÃO JOGAR
+========================= */
+
+document
+    .getElementById("botaoJogar")
+    .addEventListener(
+        "click",
+
+        () => {
+
+            localStorage.setItem(
+                "skinAranha",
+                skinSelecionada
+            );
+
+            window.location.href =
+                "jogo.html";
+
+        }
+    );
+
+</script>
+
+
+</body>
+
+</html>

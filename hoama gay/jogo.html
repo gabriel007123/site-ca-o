@@ -1,0 +1,3626 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Homem-Aranha vs Venom</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+
+    margin: 0;
+
+    background: #08090d;
+
+    color: white;
+
+    font-family: Arial, sans-serif;
+
+    overflow: hidden;
+
+}
+
+#game {
+
+    display: block;
+
+    margin: 0 auto;
+
+    background: #20232b;
+
+    width: 100vw;
+
+    height: 100vh;
+
+    max-width: 1000px;
+
+    max-height: 600px;
+
+    border: 3px solid #333;
+
+}
+
+#info {
+
+    position: fixed;
+
+    top: 8px;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 10;
+
+    color: white;
+
+    background: rgba(0,0,0,0.65);
+
+    padding: 8px 15px;
+
+    border-radius: 8px;
+
+    font-size: 14px;
+
+    text-align: center;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="info">
+
+A/D ou ←/→ = andar |
+W, ↑ ou Espaço = pular |
+F = teia |
+E = teia especial |
+SHIFT = esquiva |
+Clique = atacar |
+R = reiniciar
+
+</div>
+
+<canvas
+id="game"
+width="1000"
+height="600">
+</canvas>
+
+
+<script>
+
+/* ============================================================
+CONFIGURAÇÕES
+============================================================ */
+
+const canvas =
+document.getElementById("game");
+
+const ctx =
+canvas.getContext("2d");
+
+const WIDTH = 1000;
+
+const HEIGHT = 600;
+
+const GRAVIDADE = 0.65;
+
+const VELOCIDADE_JOGADOR = 5;
+
+const PULO = -13;
+
+const CHAO = 500;
+
+const VIDA_MAX_JOGADOR = 5;
+
+const VIDA_MAX_VENOM = 15;
+
+const ENERGIA_MAX = 100;
+
+
+/* ============================================================
+ESTADO
+============================================================ */
+
+let estado = "selecionando";
+
+let jogador;
+
+let venom;
+
+let moedas = [];
+
+let teiasBrancas = [];
+
+let teiasPretas = [];
+
+let efeitos = [];
+
+let personagemSelecionado = null;
+
+
+/* ============================================================
+PERSONAGENS
+============================================================ */
+
+const personagens = [
+
+    {
+        nome: "Homem-Aranha",
+        arquivo: "vasco.webp",
+        imagem: new Image(),
+        carregada: false
+    },
+
+    {
+        nome: "Miles Morales",
+        arquivo: "Miles_Morales.webp",
+        imagem: new Image(),
+        carregada: false
+    },
+
+    {
+        nome: "Aranha Preto",
+        arquivo: "pose_preto_final.png",
+        imagem: new Image(),
+        carregada: false
+    },
+
+    {
+        nome: "Aranha Branco",
+        arquivo: "branco_invertida.png",
+        imagem: new Image(),
+        carregada: false
+    }
+
+];
+
+
+personagens.forEach(function(personagem) {
+
+    personagem.imagem.onload =
+    function() {
+
+        personagem.carregada = true;
+
+        console.log(
+            "Imagem carregada:",
+            personagem.arquivo
+        );
+
+    };
+
+
+    personagem.imagem.onerror =
+    function() {
+
+        console.error(
+            "ERRO: não encontrei",
+            personagem.arquivo
+        );
+
+    };
+
+
+    personagem.imagem.src =
+        "./" + personagem.arquivo;
+
+});
+
+
+/* ============================================================
+VENOM
+============================================================ */
+
+const imagemVenom =
+    new Image();
+
+let venomCarregado = false;
+
+imagemVenom.onload =
+function() {
+
+    venomCarregado = true;
+
+};
+
+imagemVenom.onerror =
+function() {
+
+    console.error(
+        "ERRO: não encontrei coisas.png"
+    );
+
+};
+
+imagemVenom.src =
+    "./coisas.png";
+
+
+/* ============================================================
+CENÁRIO
+============================================================ */
+
+const imagemCenario =
+    new Image();
+
+let cenarioCarregado = false;
+
+imagemCenario.onload =
+function() {
+
+    cenarioCarregado = true;
+
+};
+
+imagemCenario.onerror =
+function() {
+
+    console.error(
+        "ERRO: não encontrei loud.png"
+    );
+
+};
+
+imagemCenario.src =
+    "./loud.png";
+
+
+/* ============================================================
+TECLAS
+============================================================ */
+
+const teclas = {};
+
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+
+        const tecla =
+            event.key.toLowerCase();
+
+        teclas[tecla] = true;
+
+
+        /* ====================================================
+        ESCOLHA DOS PERSONAGENS
+        ==================================================== */
+
+        if (
+            estado === "selecionando"
+        ) {
+
+            if (tecla === "1") {
+
+                selecionarPersonagem(0);
+
+            }
+
+            if (tecla === "2") {
+
+                selecionarPersonagem(1);
+
+            }
+
+            if (tecla === "3") {
+
+                selecionarPersonagem(2);
+
+            }
+
+            if (tecla === "4") {
+
+                selecionarPersonagem(3);
+
+            }
+
+            return;
+
+        }
+
+
+        /* ====================================================
+        PULO
+        ==================================================== */
+
+        if (
+
+            (
+                tecla === "w" ||
+                tecla === "arrowup" ||
+                event.key === " "
+            ) &&
+
+            estado === "jogando"
+
+        ) {
+
+            if (
+                jogador.noChao
+            ) {
+
+                jogador.vy = PULO;
+
+                jogador.noChao = false;
+
+            }
+
+            event.preventDefault();
+
+        }
+
+
+        /* ====================================================
+        TEIA
+        ==================================================== */
+
+        if (
+            tecla === "f" &&
+            estado === "jogando"
+        ) {
+
+            dispararTeiaAranha();
+
+        }
+
+
+        /* ====================================================
+        TEIA ESPECIAL
+        ==================================================== */
+
+        if (
+            tecla === "e" &&
+            estado === "jogando"
+        ) {
+
+            dispararTeiaEspecial();
+
+        }
+
+
+        /* ====================================================
+        ESQUIVA
+        ==================================================== */
+
+        if (
+            tecla === "shift" &&
+            estado === "jogando"
+        ) {
+
+            jogador.esquivar();
+
+        }
+
+
+        /* ====================================================
+        REINICIAR
+        ==================================================== */
+
+        if (
+
+            tecla === "r" &&
+
+            (
+                estado === "gameover" ||
+                estado === "vitoria"
+            )
+
+        ) {
+
+            estado =
+                "selecionando";
+
+        }
+
+    }
+);
+
+
+document.addEventListener(
+    "keyup",
+    function(event) {
+
+        teclas[
+            event.key.toLowerCase()
+        ] = false;
+
+    }
+);
+
+
+/* ============================================================
+MOUSE
+============================================================ */
+
+canvas.addEventListener(
+    "mousedown",
+    function(event) {
+
+        const pos =
+            pegarMouse(event);
+
+
+        /* SELEÇÃO */
+
+        if (
+            estado === "selecionando"
+        ) {
+
+            escolherPorClique(
+                pos.x,
+                pos.y
+            );
+
+            return;
+
+        }
+
+
+        /* JOGO */
+
+        if (
+            estado !== "jogando"
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            event.button === 0
+        ) {
+
+            atacarComClique(
+                pos.x,
+                pos.y
+            );
+
+        }
+
+    }
+);
+
+
+function pegarMouse(event) {
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+    return {
+
+        x:
+        (event.clientX - rect.left) *
+        (WIDTH / rect.width),
+
+        y:
+        (event.clientY - rect.top) *
+        (HEIGHT / rect.height)
+
+    };
+
+}
+
+
+/* ============================================================
+SELEÇÃO
+============================================================ */
+
+function desenharSelecao() {
+
+    /* FUNDO */
+
+    const gradiente =
+        ctx.createLinearGradient(
+            0,
+            0,
+            0,
+            HEIGHT
+        );
+
+    gradiente.addColorStop(
+        0,
+        "#111827"
+    );
+
+    gradiente.addColorStop(
+        1,
+        "#030407"
+    );
+
+    ctx.fillStyle =
+        gradiente;
+
+    ctx.fillRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+
+    /* TÍTULO */
+
+    texto(
+        "ESCOLHA SEU HOMEM-ARANHA",
+        WIDTH / 2,
+        55,
+        34,
+        "#ffffff",
+        true
+    );
+
+
+    texto(
+        "Escolha seu personagem",
+        WIDTH / 2,
+        88,
+        18,
+        "#aaaaaa",
+        true
+    );
+
+
+    const largura = 190;
+
+    const altura = 320;
+
+    const espacamento = 20;
+
+    const total =
+        largura * 4 +
+        espacamento * 3;
+
+    const inicioX =
+        (WIDTH - total) / 2;
+
+    const y = 130;
+
+
+    for (
+        let i = 0;
+        i < personagens.length;
+        i++
+    ) {
+
+        const personagem =
+            personagens[i];
+
+        const x =
+            inicioX +
+            i *
+            (
+                largura +
+                espacamento
+            );
+
+
+        /* CARD */
+
+        ctx.fillStyle =
+            "#151923";
+
+        ctx.fillRect(
+            x,
+            y,
+            largura,
+            altura
+        );
+
+
+        /* BORDA */
+
+        ctx.strokeStyle =
+            "#3f4657";
+
+        ctx.lineWidth = 3;
+
+        ctx.strokeRect(
+            x,
+            y,
+            largura,
+            altura
+        );
+
+
+        /* NÚMERO */
+
+        ctx.fillStyle =
+            "#e32632";
+
+        ctx.beginPath();
+
+        ctx.arc(
+            x + 28,
+            y + 28,
+            19,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+
+        texto(
+            String(i + 1),
+            x + 28,
+            y + 35,
+            17,
+            "#ffffff",
+            true
+        );
+
+
+        /* IMAGEM */
+
+        if (
+            personagem.carregada
+        ) {
+
+            desenharImagemProporcional(
+
+                personagem.imagem,
+
+                x + 15,
+                y + 48,
+                largura - 30,
+                215
+
+            );
+
+        }
+
+        else {
+
+            texto(
+                "CARREGANDO...",
+                x + largura / 2,
+                y + 155,
+                15,
+                "#00d9ff",
+                true
+            );
+
+        }
+
+
+        /* NOME */
+
+        texto(
+            personagem.nome,
+            x + largura / 2,
+            y + 288,
+            16,
+            "#ffffff",
+            true
+        );
+
+
+        /* SELECIONADO */
+
+        if (
+            personagemSelecionado ===
+            personagem
+        ) {
+
+            ctx.strokeStyle =
+                "#00d9ff";
+
+            ctx.lineWidth = 5;
+
+            ctx.strokeRect(
+                x,
+                y,
+                largura,
+                altura
+            );
+
+        }
+
+    }
+
+
+    texto(
+        "1     2     3     4",
+        WIDTH / 2,
+        505,
+        25,
+        "#00d9ff",
+        true
+    );
+
+
+    texto(
+        "Clique em um personagem ou use 1, 2, 3 ou 4",
+        WIDTH / 2,
+        540,
+        15,
+        "#888888",
+        true
+    );
+
+}
+
+
+function desenharImagemProporcional(
+    imagem,
+    x,
+    y,
+    largura,
+    altura
+) {
+
+    const proporcao =
+        Math.min(
+            largura / imagem.width,
+            altura / imagem.height
+        );
+
+
+    const novaLargura =
+        imagem.width * proporcao;
+
+    const novaAltura =
+        imagem.height * proporcao;
+
+
+    const novoX =
+        x +
+        (
+            largura -
+            novaLargura
+        ) / 2;
+
+
+    const novoY =
+        y +
+        (
+            altura -
+            novaAltura
+        ) / 2;
+
+
+    ctx.drawImage(
+        imagem,
+        novoX,
+        novoY,
+        novaLargura,
+        novaAltura
+    );
+
+}
+
+
+function escolherPorClique(x, y) {
+
+    const largura = 190;
+
+    const altura = 320;
+
+    const espacamento = 20;
+
+    const total =
+        largura * 4 +
+        espacamento * 3;
+
+    const inicioX =
+        (WIDTH - total) / 2;
+
+    const cardY = 130;
+
+
+    for (
+        let i = 0;
+        i < 4;
+        i++
+    ) {
+
+        const cardX =
+            inicioX +
+            i *
+            (
+                largura +
+                espacamento
+            );
+
+
+        if (
+
+            x >= cardX &&
+
+            x <=
+            cardX + largura &&
+
+            y >= cardY &&
+
+            y <=
+            cardY + altura
+
+        ) {
+
+            selecionarPersonagem(i);
+
+            return;
+
+        }
+
+    }
+
+}
+
+
+function selecionarPersonagem(indice) {
+
+    const personagem =
+        personagens[indice];
+
+
+    if (
+        !personagem
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        !personagem.carregada
+    ) {
+
+        console.warn(
+            "A imagem ainda não carregou:",
+            personagem.arquivo
+        );
+
+        return;
+
+    }
+
+
+    personagemSelecionado =
+        personagem;
+
+
+    console.log(
+        "Personagem escolhido:",
+        personagem.nome
+    );
+
+
+    iniciarJogo();
+
+}
+
+
+/* ============================================================
+INICIAR JOGO
+============================================================ */
+
+function iniciarJogo() {
+
+    jogador =
+        new Jogador();
+
+    venom =
+        new Venom();
+
+    teiasBrancas =
+        [];
+
+    teiasPretas =
+        [];
+
+    efeitos =
+        [];
+
+    criarMoedas();
+
+    estado =
+        "jogando";
+
+}
+
+
+/* ============================================================
+JOGADOR
+============================================================ */
+
+class Jogador {
+
+    constructor() {
+
+        this.largura = 65;
+
+        this.altura = 85;
+
+        this.x = 100;
+
+        this.y =
+            CHAO -
+            this.altura;
+
+        this.vx = 0;
+
+        this.vy = 0;
+
+        this.noChao = true;
+
+        this.vida =
+            VIDA_MAX_JOGADOR;
+
+        this.moedas = 0;
+
+        this.pontos = 0;
+
+        this.energia =
+            ENERGIA_MAX;
+
+        this.invulneravel = 0;
+
+        this.dash = 0;
+
+        this.cooldownDash = 0;
+
+        this.ataqueAereo = 0;
+
+    }
+
+
+    atualizar() {
+
+        this.vx = 0;
+
+
+        if (
+            teclas["a"] ||
+            teclas["arrowleft"]
+        ) {
+
+            this.vx =
+                -VELOCIDADE_JOGADOR;
+
+        }
+
+
+        if (
+            teclas["d"] ||
+            teclas["arrowright"]
+        ) {
+
+            this.vx =
+                VELOCIDADE_JOGADOR;
+
+        }
+
+
+        this.x += this.vx;
+
+
+        if (
+            this.x < 0
+        ) {
+
+            this.x = 0;
+
+        }
+
+
+        if (
+            this.x +
+            this.largura >
+            WIDTH
+        ) {
+
+            this.x =
+                WIDTH -
+                this.largura;
+
+        }
+
+
+        /* GRAVIDADE */
+
+        this.vy += GRAVIDADE;
+
+
+        if (
+            this.vy > 15
+        ) {
+
+            this.vy = 15;
+
+        }
+
+
+        this.y += this.vy;
+
+
+        this.noChao = false;
+
+
+        if (
+            this.y +
+            this.altura >=
+            CHAO
+        ) {
+
+            this.y =
+                CHAO -
+                this.altura;
+
+            this.vy = 0;
+
+            this.noChao = true;
+
+        }
+
+
+        /* ENERGIA */
+
+        if (
+            this.energia <
+            ENERGIA_MAX
+        ) {
+
+            this.energia += 0.12;
+
+        }
+
+
+        /* INVULNERABILIDADE */
+
+        if (
+            this.invulneravel > 0
+        ) {
+
+            this.invulneravel--;
+
+        }
+
+
+        /* DASH */
+
+        if (
+            this.dash !== 0
+        ) {
+
+            this.x +=
+                this.dash;
+
+            this.dash *= 0.82;
+
+            this.invulneravel = 5;
+
+
+            if (
+                Math.abs(this.dash) < 0.5
+            ) {
+
+                this.dash = 0;
+
+            }
+
+        }
+
+
+        if (
+            this.cooldownDash > 0
+        ) {
+
+            this.cooldownDash--;
+
+        }
+
+
+        if (
+            this.ataqueAereo > 0
+        ) {
+
+            this.ataqueAereo--;
+
+        }
+
+    }
+
+
+    esquivar() {
+
+        if (
+            this.cooldownDash > 0
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            this.energia < 20
+        ) {
+
+            return;
+
+        }
+
+
+        let direcao = 1;
+
+
+        if (
+            teclas["a"] ||
+            teclas["arrowleft"]
+        ) {
+
+            direcao = -1;
+
+        }
+
+        else if (
+            teclas["d"] ||
+            teclas["arrowright"]
+        ) {
+
+            direcao = 1;
+
+        }
+
+        else {
+
+            if (
+                venom.x <
+                this.x
+            ) {
+
+                direcao = 1;
+
+            }
+
+            else {
+
+                direcao = -1;
+
+            }
+
+        }
+
+
+        this.dash =
+            direcao * 14;
+
+        this.cooldownDash = 45;
+
+        this.energia -= 20;
+
+        this.invulneravel = 35;
+
+
+        criarEfeito(
+
+            this.x +
+            this.largura / 2,
+
+            this.y +
+            this.altura / 2,
+
+            "#39a9ff"
+
+        );
+
+    }
+
+
+    receberDano() {
+
+        if (
+            this.invulneravel > 0
+        ) {
+
+            return;
+
+        }
+
+
+        this.vida--;
+
+        this.invulneravel = 80;
+
+        this.vy = -6;
+
+        this.x -= 25;
+
+
+        if (
+            this.x < 0
+        ) {
+
+            this.x = 0;
+
+        }
+
+
+        criarEfeito(
+
+            this.x +
+            this.largura / 2,
+
+            this.y +
+            this.altura / 2,
+
+            "#ff2020"
+
+        );
+
+    }
+
+
+    desenhar() {
+
+        if (
+
+            this.invulneravel > 0 &&
+
+            Math.floor(
+                this.invulneravel / 5
+            ) % 2 === 0
+
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+
+            personagemSelecionado &&
+
+            personagemSelecionado.carregada
+
+        ) {
+
+            ctx.drawImage(
+
+                personagemSelecionado.imagem,
+
+                this.x,
+                this.y,
+                this.largura,
+                this.altura
+
+            );
+
+        }
+
+        else {
+
+            ctx.fillStyle =
+                "#d71920";
+
+            ctx.fillRect(
+
+                this.x,
+                this.y,
+                this.largura,
+                this.altura
+
+            );
+
+        }
+
+    }
+
+
+    centro() {
+
+        return {
+
+            x:
+                this.x +
+                this.largura / 2,
+
+            y:
+                this.y +
+                this.altura / 2
+
+        };
+
+    }
+
+}
+
+
+/* ============================================================
+VENOM
+============================================================ */
+
+class Venom {
+
+    constructor() {
+
+        this.largura = 130;
+
+        this.altura = 150;
+
+        this.x = 760;
+
+        this.y =
+            CHAO -
+            this.altura;
+
+        this.vx = 2;
+
+        this.vy = 0;
+
+        this.vida =
+            VIDA_MAX_VENOM;
+
+        this.invulneravel = 0;
+
+        this.tempoAtaque = 0;
+
+        this.atacando = 0;
+
+        this.vivo = true;
+
+        this.furia = false;
+
+        this.tempoFuria = 0;
+
+        this.investida = 0;
+
+        this.pulando = false;
+
+        this.cooldownInvestida = 100;
+
+    }
+
+
+    atualizar() {
+
+        if (
+            !this.vivo
+        ) {
+
+            return;
+
+        }
+
+
+        /* FÚRIA */
+
+        if (
+
+            this.vida <= 5 &&
+
+            !this.furia
+
+        ) {
+
+            this.furia = true;
+
+            this.tempoFuria = 180;
+
+            this.vx =
+                this.vx > 0
+                ? 5
+                : -5;
+
+
+            criarEfeito(
+
+                this.x +
+                this.largura / 2,
+
+                this.y +
+                this.altura / 2,
+
+                "#ff0000"
+
+            );
+
+        }
+
+
+        /* MOVIMENTO */
+
+        this.x += this.vx;
+
+
+        if (
+            this.x < 600
+        ) {
+
+            this.x = 600;
+
+            this.vx =
+                Math.abs(this.vx);
+
+        }
+
+
+        if (
+            this.x +
+            this.largura >
+            920
+        ) {
+
+            this.x =
+                920 -
+                this.largura;
+
+            this.vx =
+                -Math.abs(this.vx);
+
+        }
+
+
+        /* PULO */
+
+        if (
+
+            !this.pulando &&
+
+            Math.random() < 0.008
+
+        ) {
+
+            this.vy = -11;
+
+            this.pulando = true;
+
+        }
+
+
+        this.vy += GRAVIDADE;
+
+        this.y += this.vy;
+
+
+        if (
+            this.y +
+            this.altura >=
+            CHAO
+        ) {
+
+            this.y =
+                CHAO -
+                this.altura;
+
+            this.vy = 0;
+
+            this.pulando = false;
+
+        }
+
+
+        /* INVULNERABILIDADE */
+
+        if (
+            this.invulneravel > 0
+        ) {
+
+            this.invulneravel--;
+
+        }
+
+
+        /* ATAQUE */
+
+        if (
+            this.tempoAtaque > 0
+        ) {
+
+            this.tempoAtaque--;
+
+        }
+
+
+        if (
+            this.atacando > 0
+        ) {
+
+            this.atacando--;
+
+        }
+
+
+        /* INVESTIDA */
+
+        if (
+            this.cooldownInvestida > 0
+        ) {
+
+            this.cooldownInvestida--;
+
+        }
+
+
+        if (
+
+            this.cooldownInvestida <= 0 &&
+
+            Math.random() <
+            (
+                this.furia
+                ? 0.04
+                : 0.012
+            )
+
+        ) {
+
+            this.iniciarInvestida();
+
+        }
+
+
+        /* TEIAS */
+
+        let chance =
+            this.furia
+            ? 0.075
+            : 0.025;
+
+
+        let intervalo =
+            this.furia
+            ? 35
+            : 100;
+
+
+        if (
+
+            Math.random() < chance &&
+
+            this.tempoAtaque <= 0
+
+        ) {
+
+            this.atacarComTeia();
+
+            this.tempoAtaque =
+                intervalo;
+
+            this.atacando = 18;
+
+        }
+
+    }
+
+
+    iniciarInvestida() {
+
+        const alvo =
+            jogador.centro();
+
+        const meuCentro =
+            this.centro();
+
+
+        if (
+            alvo.x <
+            meuCentro.x
+        ) {
+
+            this.vx =
+                this.furia
+                ? -9
+                : -7;
+
+        }
+
+        else {
+
+            this.vx =
+                this.furia
+                ? 9
+                : 7;
+
+        }
+
+
+        this.investida = 30;
+
+        this.cooldownInvestida =
+            this.furia
+            ? 100
+            : 180;
+
+
+        criarEfeito(
+
+            meuCentro.x,
+            meuCentro.y,
+            "#8b00ff"
+
+        );
+
+    }
+
+
+    atacarComTeia() {
+
+        const inicio = {
+
+            x:
+                this.x +
+                this.largura / 2,
+
+            y:
+                this.y + 70
+
+        };
+
+
+        const alvo =
+            jogador.centro();
+
+
+        let quantidade =
+            this.furia
+            ? 6
+            : 3;
+
+
+        for (
+            let i = 0;
+            i < quantidade;
+            i++
+        ) {
+
+            const alvoVariado = {
+
+                x:
+                    alvo.x +
+                    (
+                        Math.random() - 0.5
+                    ) * 120,
+
+                y:
+                    alvo.y +
+                    (
+                        Math.random() - 0.5
+                    ) * 100
+
+            };
+
+
+            teiasPretas.push(
+
+                new TeiaPreta(
+
+                    inicio,
+                    alvoVariado
+
+                )
+
+            );
+
+        }
+
+    }
+
+
+    receberDano() {
+
+        if (
+            !this.vivo
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            this.invulneravel > 0
+        ) {
+
+            return;
+
+        }
+
+
+        this.vida--;
+
+        this.invulneravel = 25;
+
+        jogador.pontos += 150;
+
+
+        criarEfeito(
+
+            this.x +
+            this.largura / 2,
+
+            this.y +
+            this.altura / 2,
+
+            "#ffffff"
+
+        );
+
+
+        if (
+
+            this.vida <= 5 &&
+
+            !this.furia
+
+        ) {
+
+            this.furia = true;
+
+            this.tempoFuria = 180;
+
+        }
+
+
+        if (
+            this.vida <= 0
+        ) {
+
+            this.vida = 0;
+
+            this.vivo = false;
+
+            jogador.pontos += 2000;
+
+        }
+
+    }
+
+
+    desenhar() {
+
+        if (
+            !this.vivo
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+
+            this.invulneravel > 0 &&
+
+            Math.floor(
+                this.invulneravel / 3
+            ) % 2 === 0
+
+        ) {
+
+            return;
+
+        }
+
+
+        /* AURA DA FÚRIA */
+
+        if (
+            this.furia
+        ) {
+
+            ctx.save();
+
+            ctx.shadowColor =
+                "#ff0000";
+
+            ctx.shadowBlur = 35;
+
+            ctx.fillStyle =
+                "rgba(255,0,0,0.20)";
+
+            ctx.beginPath();
+
+            ctx.arc(
+
+                this.x +
+                this.largura / 2,
+
+                this.y +
+                this.altura / 2,
+
+                90,
+
+                0,
+                Math.PI * 2
+
+            );
+
+            ctx.fill();
+
+            ctx.restore();
+
+        }
+
+
+        if (
+            venomCarregado
+        ) {
+
+            ctx.drawImage(
+
+                imagemVenom,
+
+                this.x,
+                this.y,
+
+                this.largura,
+                this.altura
+
+            );
+
+        }
+
+        else {
+
+            ctx.fillStyle =
+                "#080808";
+
+            ctx.fillRect(
+
+                this.x,
+                this.y,
+
+                this.largura,
+                this.altura
+
+            );
+
+        }
+
+
+        texto(
+
+            this.furia
+            ? "VENOM — FÚRIA!"
+            : "VENOM",
+
+            this.x +
+            this.largura / 2,
+
+            this.y - 55,
+
+            25,
+
+            this.furia
+            ? "#ff2020"
+            : "#ffffff",
+
+            true
+
+        );
+
+
+        /* BARRA */
+
+        ctx.fillStyle =
+            "#222";
+
+        ctx.fillRect(
+
+            this.x - 10,
+            this.y - 30,
+            150,
+            18
+
+        );
+
+
+        ctx.fillStyle =
+            this.furia
+            ? "#ff0000"
+            : "#e00000";
+
+
+        ctx.fillRect(
+
+            this.x - 10,
+            this.y - 30,
+
+            150 *
+            this.vida /
+            VIDA_MAX_VENOM,
+
+            18
+
+        );
+
+
+        texto(
+
+            this.vida +
+            "/" +
+            VIDA_MAX_VENOM,
+
+            this.x +
+            this.largura / 2,
+
+            this.y - 21,
+
+            15,
+
+            "white",
+
+            true
+
+        );
+
+    }
+
+
+    centro() {
+
+        return {
+
+            x:
+                this.x +
+                this.largura / 2,
+
+            y:
+                this.y +
+                this.altura / 2
+
+        };
+
+    }
+
+}
+
+
+/* ============================================================
+TEIA BRANCA
+============================================================ */
+
+class TeiaBranca {
+
+    constructor(inicio, fim) {
+
+        this.inicio = inicio;
+
+        this.fim = fim;
+
+        this.vida = 20;
+
+    }
+
+
+    atualizar() {
+
+        this.vida--;
+
+    }
+
+
+    desenhar() {
+
+        if (
+            this.vida <= 0
+        ) {
+
+            return;
+
+        }
+
+
+        ctx.save();
+
+        ctx.strokeStyle =
+            "#222";
+
+        ctx.lineWidth = 7;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            this.inicio.x,
+            this.inicio.y
+        );
+
+        ctx.lineTo(
+            this.fim.x,
+            this.fim.y
+        );
+
+        ctx.stroke();
+
+
+        ctx.strokeStyle =
+            "#fff";
+
+        ctx.lineWidth = 3;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            this.inicio.x,
+            this.inicio.y
+        );
+
+        ctx.lineTo(
+            this.fim.x,
+            this.fim.y
+        );
+
+        ctx.stroke();
+
+        ctx.restore();
+
+    }
+
+}
+
+
+/* ============================================================
+TEIA ESPECIAL
+============================================================ */
+
+class TeiaEspecial {
+
+    constructor(inicio, fim) {
+
+        this.inicio = inicio;
+
+        this.fim = fim;
+
+        this.vida = 35;
+
+    }
+
+
+    atualizar() {
+
+        this.vida--;
+
+    }
+
+
+    desenhar() {
+
+        if (
+            this.vida <= 0
+        ) {
+
+            return;
+
+        }
+
+
+        ctx.save();
+
+        ctx.shadowColor =
+            "#00ffff";
+
+        ctx.shadowBlur = 20;
+
+        ctx.strokeStyle =
+            "#00ffff";
+
+        ctx.lineWidth = 6;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            this.inicio.x,
+            this.inicio.y
+        );
+
+        ctx.lineTo(
+            this.fim.x,
+            this.fim.y
+        );
+
+        ctx.stroke();
+
+        ctx.restore();
+
+    }
+
+}
+
+
+/* ============================================================
+TEIA DO VENOM
+============================================================ */
+
+class TeiaPreta {
+
+    constructor(inicio, alvo) {
+
+        this.x =
+            inicio.x;
+
+        this.y =
+            inicio.y;
+
+
+        const dx =
+            alvo.x -
+            this.x;
+
+        const dy =
+            alvo.y -
+            this.y;
+
+
+        const distancia =
+            Math.hypot(
+                dx,
+                dy
+            );
+
+
+        this.vx =
+            dx /
+            distancia *
+            7;
+
+        this.vy =
+            dy /
+            distancia *
+            7;
+
+
+        this.raio = 7;
+
+        this.vida = 100;
+
+        this.acertou = false;
+
+        this.rotacao =
+            Math.random() *
+            Math.PI *
+            2;
+
+    }
+
+
+    atualizar() {
+
+        if (
+            this.acertou ||
+            this.vida <= 0
+        ) {
+
+            return;
+
+        }
+
+
+        this.x += this.vx;
+
+        this.y += this.vy;
+
+        this.vida--;
+
+        this.rotacao += 0.15;
+
+
+        const jogadorCentro =
+            jogador.centro();
+
+
+        const distancia =
+            Math.hypot(
+
+                jogadorCentro.x -
+                this.x,
+
+                jogadorCentro.y -
+                this.y
+
+            );
+
+
+        if (
+            distancia < 32
+        ) {
+
+            jogador.receberDano();
+
+            this.acertou = true;
+
+        }
+
+
+        if (
+
+            this.x < -30 ||
+            this.x > WIDTH + 30 ||
+            this.y < -30 ||
+            this.y > HEIGHT + 30
+
+        ) {
+
+            this.vida = 0;
+
+        }
+
+    }
+
+
+    desenhar() {
+
+        if (
+
+            this.vida <= 0 ||
+            this.acertou
+
+        ) {
+
+            return;
+
+        }
+
+
+        ctx.save();
+
+        ctx.translate(
+            this.x,
+            this.y
+        );
+
+        ctx.rotate(
+            this.rotacao
+        );
+
+
+        ctx.shadowColor =
+            "#000";
+
+        ctx.shadowBlur = 12;
+
+        ctx.fillStyle =
+            "#050505";
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            0,
+            0,
+            this.raio,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+
+        ctx.strokeStyle =
+            "#333";
+
+        ctx.lineWidth = 2;
+
+
+        for (
+            let i = 0;
+            i < 6;
+            i++
+        ) {
+
+            const angulo =
+                Math.PI *
+                2 /
+                6 *
+                i;
+
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                0,
+                0
+            );
+
+            ctx.lineTo(
+
+                Math.cos(angulo) *
+                13,
+
+                Math.sin(angulo) *
+                13
+
+            );
+
+            ctx.stroke();
+
+        }
+
+
+        ctx.restore();
+
+    }
+
+}
+
+
+/* ============================================================
+MOEDA
+============================================================ */
+
+class Moeda {
+
+    constructor(x, y) {
+
+        this.x = x;
+
+        this.y = y;
+
+        this.coletada = false;
+
+        this.tempo =
+            Math.random() * 100;
+
+    }
+
+
+    atualizar() {
+
+        if (
+            this.coletada
+        ) {
+
+            return;
+
+        }
+
+
+        this.tempo += 0.08;
+
+
+        const distancia =
+            Math.hypot(
+
+                jogador.centro().x -
+                this.x,
+
+                jogador.centro().y -
+                this.y
+
+            );
+
+
+        if (
+            distancia < 45
+        ) {
+
+            this.coletada = true;
+
+            jogador.moedas++;
+
+            jogador.pontos += 100;
+
+            jogador.energia += 15;
+
+
+            if (
+                jogador.energia >
+                ENERGIA_MAX
+            ) {
+
+                jogador.energia =
+                    ENERGIA_MAX;
+
+            }
+
+
+            criarEfeito(
+
+                this.x,
+                this.y,
+                "#ffd000"
+
+            );
+
+        }
+
+    }
+
+
+    desenhar() {
+
+        if (
+            this.coletada
+        ) {
+
+            return;
+
+        }
+
+
+        const movimento =
+            Math.sin(this.tempo) * 4;
+
+
+        ctx.fillStyle =
+            "#ffd000";
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+
+            this.x,
+
+            this.y +
+            movimento,
+
+            11,
+
+            0,
+            Math.PI * 2
+
+        );
+
+        ctx.fill();
+
+
+        ctx.strokeStyle =
+            "#fff18a";
+
+        ctx.lineWidth = 3;
+
+        ctx.stroke();
+
+    }
+
+}
+
+
+/* ============================================================
+EFEITO
+============================================================ */
+
+class Efeito {
+
+    constructor(x, y, cor) {
+
+        this.x = x;
+
+        this.y = y;
+
+        this.cor = cor;
+
+        this.vida = 30;
+
+        this.raio = 5;
+
+    }
+
+
+    atualizar() {
+
+        this.vida--;
+
+        this.raio += 2;
+
+    }
+
+
+    desenhar() {
+
+        if (
+            this.vida <= 0
+        ) {
+
+            return;
+
+        }
+
+
+        ctx.save();
+
+        ctx.globalAlpha =
+            this.vida / 30;
+
+        ctx.strokeStyle =
+            this.cor;
+
+        ctx.lineWidth = 4;
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+
+            this.x,
+            this.y,
+            this.raio,
+
+            0,
+            Math.PI * 2
+
+        );
+
+        ctx.stroke();
+
+
+        ctx.restore();
+
+    }
+
+}
+
+
+function criarEfeito(
+    x,
+    y,
+    cor
+) {
+
+    efeitos.push(
+
+        new Efeito(
+            x,
+            y,
+            cor
+        )
+
+    );
+
+}
+
+
+/* ============================================================
+TEIA DO JOGADOR
+============================================================ */
+
+function dispararTeiaAranha(
+    alvoX = null,
+    alvoY = null
+) {
+
+    const inicio =
+        jogador.centro();
+
+
+    if (
+        alvoX === null
+    ) {
+
+        alvoX =
+            venom.centro().x;
+
+        alvoY =
+            venom.centro().y;
+
+    }
+
+
+    teiasBrancas.push(
+
+        new TeiaBranca(
+
+            inicio,
+
+            {
+                x: alvoX,
+                y: alvoY
+            }
+
+        )
+
+    );
+
+
+    if (
+        venom.vivo
+    ) {
+
+        const distancia =
+            distanciaPontoLinha(
+
+                venom.centro(),
+
+                inicio,
+
+                {
+                    x: alvoX,
+                    y: alvoY
+                }
+
+            );
+
+
+        if (
+            distancia < 70
+        ) {
+
+            venom.receberDano();
+
+        }
+
+    }
+
+}
+
+
+/* ============================================================
+TEIA ESPECIAL
+============================================================ */
+
+function dispararTeiaEspecial() {
+
+    if (
+        jogador.energia < 40
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        !venom.vivo
+    ) {
+
+        return;
+
+    }
+
+
+    jogador.energia -= 40;
+
+
+    const inicio =
+        jogador.centro();
+
+
+    const fim =
+        venom.centro();
+
+
+    teiasBrancas.push(
+
+        new TeiaEspecial(
+            inicio,
+            fim
+        )
+
+    );
+
+
+    const distancia =
+        distanciaPontoLinha(
+
+            venom.centro(),
+            inicio,
+            fim
+
+        );
+
+
+    if (
+        distancia < 100
+    ) {
+
+        venom.receberDano();
+
+        venom.vx *= 0.45;
+
+        venom.tempoAtaque += 50;
+
+
+        criarEfeito(
+
+            venom.centro().x,
+            venom.centro().y,
+            "#00ffff"
+
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+ATAQUE COM CLIQUE
+============================================================ */
+
+function atacarComClique(
+    x,
+    y
+) {
+
+    const inicio =
+        jogador.centro();
+
+
+    /* ATAQUE AÉREO */
+
+    if (
+        !jogador.noChao
+    ) {
+
+        jogador.ataqueAereo = 20;
+
+
+        const distancia =
+            Math.hypot(
+
+                venom.centro().x -
+                jogador.centro().x,
+
+                venom.centro().y -
+                jogador.centro().y
+
+            );
+
+
+        if (
+            distancia < 140
+        ) {
+
+            venom.receberDano();
+
+            jogador.pontos += 50;
+
+
+            criarEfeito(
+
+                venom.centro().x,
+                venom.centro().y,
+                "#ffffff"
+
+            );
+
+        }
+
+        return;
+
+    }
+
+
+    /* ATAQUE NORMAL */
+
+    dispararTeiaAranha(
+        x,
+        y
+    );
+
+}
+
+
+/* ============================================================
+DISTÂNCIA PONTO-LINHA
+============================================================ */
+
+function distanciaPontoLinha(
+    ponto,
+    inicio,
+    fim
+) {
+
+    const dx =
+        fim.x -
+        inicio.x;
+
+    const dy =
+        fim.y -
+        inicio.y;
+
+
+    if (
+
+        dx === 0 &&
+        dy === 0
+
+    ) {
+
+        return Math.hypot(
+
+            ponto.x -
+            inicio.x,
+
+            ponto.y -
+            inicio.y
+
+        );
+
+    }
+
+
+    let t = (
+
+        (
+            ponto.x -
+            inicio.x
+        ) * dx +
+
+        (
+            ponto.y -
+            inicio.y
+        ) * dy
+
+    ) /
+
+    (
+        dx * dx +
+        dy * dy
+    );
+
+
+    t =
+        Math.max(
+            0,
+            Math.min(1, t)
+        );
+
+
+    const x =
+        inicio.x +
+        t * dx;
+
+
+    const y =
+        inicio.y +
+        t * dy;
+
+
+    return Math.hypot(
+
+        ponto.x - x,
+
+        ponto.y - y
+
+    );
+
+}
+
+
+/* ============================================================
+CENÁRIO
+============================================================ */
+
+function desenharCenario() {
+
+    if (
+        cenarioCarregado
+    ) {
+
+        ctx.drawImage(
+
+            imagemCenario,
+
+            0,
+            0,
+
+            WIDTH,
+            HEIGHT
+
+        );
+
+    }
+
+    else {
+
+        ctx.fillStyle =
+            "#20232b";
+
+        ctx.fillRect(
+
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+MOEDAS
+============================================================ */
+
+function criarMoedas() {
+
+    moedas = [];
+
+
+    const posicoes = [
+
+        [80,450],
+        [180,390],
+        [280,450],
+        [360,350],
+        [470,250],
+        [560,330],
+        [650,420],
+        [730,350],
+        [820,450],
+        [920,390],
+        [430,450],
+        [580,450]
+
+    ];
+
+
+    for (
+        const pos of posicoes
+    ) {
+
+        moedas.push(
+
+            new Moeda(
+                pos[0],
+                pos[1]
+            )
+
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+COLISÃO COM VENOM
+============================================================ */
+
+function verificarColisaoVenom() {
+
+    if (
+        !venom.vivo
+    ) {
+
+        return;
+
+    }
+
+
+    const margem = 15;
+
+
+    if (
+
+        jogador.x <
+        venom.x +
+        venom.largura -
+        margem &&
+
+        jogador.x +
+        jogador.largura >
+        venom.x +
+        margem &&
+
+        jogador.y <
+        venom.y +
+        venom.altura -
+        margem &&
+
+        jogador.y +
+        jogador.altura >
+        venom.y +
+        margem
+
+    ) {
+
+        jogador.receberDano();
+
+    }
+
+}
+
+
+/* ============================================================
+HUD
+============================================================ */
+
+function desenharHUD() {
+
+    ctx.fillStyle =
+        "rgba(0,0,0,0.78)";
+
+
+    ctx.fillRect(
+        15,
+        15,
+        390,
+        155
+    );
+
+
+    texto(
+
+        personagemSelecionado
+        ? personagemSelecionado.nome.toUpperCase()
+        : "HOMEM-ARANHA",
+
+        30,
+        38,
+
+        20,
+        "#fff"
+
+    );
+
+
+    /* VIDA */
+
+    ctx.fillStyle =
+        "#333";
+
+    ctx.fillRect(
+        30,
+        50,
+        200,
+        20
+    );
+
+
+    ctx.fillStyle =
+        "#e32632";
+
+
+    ctx.fillRect(
+
+        30,
+        50,
+
+        200 *
+        Math.max(
+            jogador.vida,
+            0
+        ) /
+        VIDA_MAX_JOGADOR,
+
+        20
+
+    );
+
+
+    texto(
+
+        jogador.vida +
+        "/" +
+        VIDA_MAX_JOGADOR,
+
+        240,
+        50,
+        18,
+        "white"
+
+    );
+
+
+    /* ENERGIA */
+
+    texto(
+
+        "ENERGIA",
+
+        30,
+        90,
+
+        15,
+        "#00d9ff"
+
+    );
+
+
+    ctx.fillStyle =
+        "#222";
+
+    ctx.fillRect(
+        100,
+        77,
+        180,
+        15
+    );
+
+
+    ctx.fillStyle =
+        "#00d9ff";
+
+
+    ctx.fillRect(
+
+        100,
+        77,
+
+        180 *
+        jogador.energia /
+        ENERGIA_MAX,
+
+        15
+
+    );
+
+
+    texto(
+
+        Math.floor(
+            jogador.energia
+        ) +
+        "/100",
+
+        290,
+        90,
+
+        14,
+        "white"
+
+    );
+
+
+    texto(
+
+        "Moedas: " +
+        jogador.moedas,
+
+        30,
+        120,
+
+        18,
+        "#ffd000"
+
+    );
+
+
+    texto(
+
+        "Pontos: " +
+        jogador.pontos,
+
+        190,
+        120,
+
+        18,
+        "#fff"
+
+    );
+
+
+    texto(
+
+        "E = Especial | SHIFT = Esquiva",
+
+        30,
+        150,
+
+        14,
+        "#aaa"
+
+    );
+
+
+    /* FÚRIA */
+
+    if (
+
+        venom.furia &&
+        venom.vivo
+
+    ) {
+
+        texto(
+
+            "⚠ VENOM ESTÁ FURIOSO!",
+
+            WIDTH / 2,
+
+            45,
+
+            25,
+
+            "#ff2020",
+
+            true
+
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+TEXTO
+============================================================ */
+
+function texto(
+    mensagem,
+    x,
+    y,
+    tamanho = 20,
+    cor = "white",
+    centralizado = false
+) {
+
+    ctx.font =
+        "bold " +
+        tamanho +
+        "px Arial";
+
+
+    ctx.fillStyle =
+        cor;
+
+
+    ctx.textAlign =
+        centralizado
+        ? "center"
+        : "left";
+
+
+    ctx.fillText(
+        mensagem,
+        x,
+        y
+    );
+
+
+    ctx.textAlign =
+        "left";
+
+}
+
+
+/* ============================================================
+TELA FINAL
+============================================================ */
+
+function telaFinal(
+    titulo,
+    cor
+) {
+
+    ctx.fillStyle =
+        "rgba(0,0,0,0.82)";
+
+
+    ctx.fillRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+
+    texto(
+
+        titulo,
+
+        WIDTH / 2,
+        220,
+
+        70,
+        cor,
+        true
+
+    );
+
+
+    texto(
+
+        "Pontuação: " +
+        jogador.pontos,
+
+        WIDTH / 2,
+        290,
+
+        28,
+        "white",
+        true
+
+    );
+
+
+    texto(
+
+        "Moedas: " +
+        jogador.moedas,
+
+        WIDTH / 2,
+        330,
+
+        24,
+        "#ffd000",
+        true
+
+    );
+
+
+    texto(
+
+        "Pressione R para escolher novamente",
+
+        WIDTH / 2,
+        400,
+
+        25,
+        "white",
+        true
+
+    );
+
+}
+
+
+/* ============================================================
+ATUALIZAR
+============================================================ */
+
+function atualizar() {
+
+    if (
+        estado !== "jogando"
+    ) {
+
+        return;
+
+    }
+
+
+    jogador.atualizar();
+
+    venom.atualizar();
+
+    verificarColisaoVenom();
+
+
+    for (
+        const moeda of moedas
+    ) {
+
+        moeda.atualizar();
+
+    }
+
+
+    for (
+        const teia of teiasBrancas
+    ) {
+
+        teia.atualizar();
+
+    }
+
+
+    teiasBrancas =
+        teiasBrancas.filter(
+
+            teia =>
+            teia.vida > 0
+
+        );
+
+
+    for (
+        const teia of teiasPretas
+    ) {
+
+        teia.atualizar();
+
+    }
+
+
+    teiasPretas =
+        teiasPretas.filter(
+
+            teia =>
+            teia.vida > 0
+
+        );
+
+
+    for (
+        const efeito of efeitos
+    ) {
+
+        efeito.atualizar();
+
+    }
+
+
+    efeitos =
+        efeitos.filter(
+
+            efeito =>
+            efeito.vida > 0
+
+        );
+
+
+    /* GAME OVER */
+
+    if (
+        jogador.vida <= 0
+    ) {
+
+        jogador.vida = 0;
+
+        estado =
+            "gameover";
+
+    }
+
+
+    /* VITÓRIA */
+
+    if (
+        !venom.vivo
+    ) {
+
+        estado =
+            "vitoria";
+
+    }
+
+}
+
+
+/* ============================================================
+DESENHAR
+============================================================ */
+
+function desenhar() {
+
+    ctx.clearRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+
+    /* ========================================================
+    SELEÇÃO
+    ======================================================== */
+
+    if (
+        estado === "selecionando"
+    ) {
+
+        desenharSelecao();
+
+        return;
+
+    }
+
+
+    /* ========================================================
+    CENÁRIO
+    ======================================================== */
+
+    desenharCenario();
+
+
+    /* MOEDAS */
+
+    for (
+        const moeda of moedas
+    ) {
+
+        moeda.desenhar();
+
+    }
+
+
+    /* TEIAS DO VENOM */
+
+    for (
+        const teia of teiasPretas
+    ) {
+
+        teia.desenhar();
+
+    }
+
+
+    /* EFEITOS */
+
+    for (
+        const efeito of efeitos
+    ) {
+
+        efeito.desenhar();
+
+    }
+
+
+    /* VENOM */
+
+    venom.desenhar();
+
+
+    /* TEIAS DO ARANHA */
+
+    for (
+        const teia of teiasBrancas
+    ) {
+
+        teia.desenhar();
+
+    }
+
+
+    /* JOGADOR */
+
+    jogador.desenhar();
+
+
+    /* HUD */
+
+    desenharHUD();
+
+
+    /* FINAL */
+
+    if (
+        estado === "gameover"
+    ) {
+
+        telaFinal(
+            "GAME OVER",
+            "#e32632"
+        );
+
+    }
+
+
+    if (
+        estado === "vitoria"
+    ) {
+
+        telaFinal(
+            "VITÓRIA!",
+            "#35d66b"
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+LOOP
+============================================================ */
+
+function loop() {
+
+    atualizar();
+
+    desenhar();
+
+    requestAnimationFrame(
+        loop
+    );
+
+}
+
+
+/* ============================================================
+COMEÇAR
+============================================================ */
+
+loop();
+
+</script>
+
+</body>
+
+</html>
